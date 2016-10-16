@@ -42,10 +42,10 @@ class account(metaclass=ABCMeta):
             
         self.load_transaction_files()
  
-        self.load_transactions()
-        
-        self.balance = self.transactions['amount'].sum()
+        self.balance = pd.np.nan
         """Account balance is the sum of all transaction amounts."""
+        
+        self.load_transactions()
         
         self.currency = currency
         
@@ -101,6 +101,9 @@ class account(metaclass=ABCMeta):
                     N_new += n_new
                     self.transactions = self.transactions.append(new_transactions, 
                         ignore_index=True)
+                
+        # update balance
+        self.balance = self.transactions['amount'].sum()
                 
         if there_were_new_transaction_files:
             # save new file name list
