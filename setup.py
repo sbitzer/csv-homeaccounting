@@ -8,11 +8,11 @@ Created on Sun Oct 16 18:06:36 2016
 from setuptools import setup
 
 setup(
-    name='csv-homebanking',
+    name='csv-homeaccounting',
     version='0.1.0',
     author='Sebastian Bitzer',
     author_email='official@sbitzer.eu',
-    packages=['homebanking'],
+    packages=['homeaccounting'],
     description=('Keeps track of finances at home based on csv-files that can '
                  'typically be downloaded from online banking websites.'),
     classifiers=[
