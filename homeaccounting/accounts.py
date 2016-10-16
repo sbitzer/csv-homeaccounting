@@ -14,7 +14,7 @@ import pandas as pd
 class account(metaclass=ABCMeta):
     
     def __init__(self, name='base_account', filename=None, path='.', 
-                 check_for_duplicates=True):
+                 check_for_duplicates=True, currency='EUR'):
         self.name = name
         """Account name, can contain spaces."""
         
@@ -43,6 +43,11 @@ class account(metaclass=ABCMeta):
         self.load_transaction_files()
  
         self.load_transactions()
+        
+        self.balance = self.transactions['amount'].sum()
+        """Account balance is the sum of all transaction amounts."""
+        
+        self.currency = currency
         
 
     def load_transactions(self):
@@ -148,6 +153,10 @@ class account(metaclass=ABCMeta):
             self.transaction_files = filenames
         else:
             self.transaction_files = []
+            
+            
+    def __str__(self):
+        return self.name + ': %8.2f %s' % (self.balance, self.currency)
         
         
 class ing_diba_giro(account):
