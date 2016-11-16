@@ -2,3 +2,5 @@
 .spyproject
 __pycache__
 *.egg-info
+*.csv
+*.ipynb_checkpoints
