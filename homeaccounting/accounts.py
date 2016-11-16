@@ -199,6 +199,49 @@ class ing_diba_giro(account):
             encoding='latin_1')
 
             
+class manual_current(account):
+    """A manually maintained account using the basic csv-format as follows:
+    
+    1 index column + 6 typical account columns
+    1st row with column names
+    comma-separation
+    dates (2nd and 3rd columns) in format yyyy-mm-dd
+    """
+    
+    def __init__(self, name='default manual', **account_args):
+        super().__init__(name=name, **account_args)
+    
+    def get_transactions_from_csv(self, filepath):
+        """As this is a manual account no transactions will be loaded."""
+        return pd.DataFrame(columns=('booking date', 'value date', 'agent', 
+                                     'type', 'description', 'amount'))
+        
+    def add_transaction(self, vdate, agent, desc, amount, bdate=None, 
+                        t_type=''):
+        """add a transaction manually to the account."""
+        
+        # check format of vdate
+        vdate = parse_date(vdate)
+        
+        if bdate is None:
+            bdate = vdate
+        else:
+            bdate = parse_date(bdate)
+            
+        transaction = pd.DataFrame([[bdate, vdate, rmspace(agent), 
+            rmspace(t_type), rmspace(desc), float(amount)]], columns=(
+            'booking date', 'value date', 'agent', 'type', 'description', 
+            'amount'))
+        
+        self.transactions = self.transactions.append(transaction, 
+                                                     ignore_index=True)
+        
+        # update balance
+        self.balance = self.transactions['amount'].sum()
+        
+        self.transactions.to_csv(os.path.join(self.path, self.filename + 
+                                              '.csv'))
+            
 def rmspace(s):
     """Removes extra whitespace and returns nan, if empty string."""
     s = " ".join(s.split())
@@ -211,3 +254,13 @@ def rmspace(s):
 def are_equal_or_nan(array, val):
     """checks whether val is in array, including when val is nan"""
     return (array == val) | ((array != array) & (val != val))
+    
+def parse_date(date):
+    """Parse the date into pandas Timestamp, handle German dd.mm.yyyy manually"""
+    if type(date) is not pd.Timestamp:
+        if isinstance(date, str) and date[2] == '.':
+            date = pd.Timestamp(pd.datetime.strptime(date, '%d.%m.%Y'))
+        else:
+            date = pd.Timestamp(date)
+                    
+    return date
