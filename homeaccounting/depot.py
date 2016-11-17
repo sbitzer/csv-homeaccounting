@@ -10,6 +10,10 @@ import os.path
 import pandas as pd
 import re
 from . import accounts
+import math
+import numpy as np
+import matplotlib.pyplot as plt
+plt.style.use('ggplot')
 
 class depot(object):
     @property
@@ -43,6 +47,9 @@ class depot(object):
             # make filename from name by replacing spaces with underscores and 
             # all lower characeters
             self.filename = self.name.replace(' ', '_').lower()
+            
+        self.currency = currency
+        """Currency in which depot is held."""
         
         self._accounts = []
         """The list of accounts held in this depot."""
@@ -95,3 +102,26 @@ class depot(object):
         
         # add to account list
         self._accounts.append(acc)
+        
+        
+    def show_overview(self):
+        """Shows account balances as a pie-plot."""
+        
+        names = []
+        balances = []
+
+        for acc in self.accounts:
+            names.append(acc.name)
+            balances.append(acc.balance)
+        
+        numzeros = math.ceil(math.log10(max(balances)))
+        total = sum(balances)
+        fmt = '%'+str(numzeros+3)+'.2f'
+        balfun = lambda pct: fmt % (pct / 100 * total)
+        
+        cols = plt.get_cmap('Accent')
+        cols = cols(np.linspace(0, 1, len(names)))
+        
+        ax = plt.axes(aspect=1)
+        ax.pie(balances, labels=names, autopct=balfun, colors=cols)
+        ax.set_title('balances in ' + self.currency)
