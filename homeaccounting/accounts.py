@@ -12,6 +12,7 @@ from os import scandir
 import pandas as pd
 import datetime as dt
 import calendar
+from warnings import warn
 
 class account(metaclass=ABCMeta):
     
@@ -288,14 +289,20 @@ class manual_current(account):
             'booking date', 'value date', 'agent', 'type', 'description', 
             'amount'))
         
-        self.transactions = self.transactions.append(transaction, 
-                                                     ignore_index=True)
-        
-        # update balance
-        self.balance = self.transactions['amount'].sum()
-        
-        self.transactions.to_csv(os.path.join(self.path, self.filename + 
-                                              '.csv'))
+        if self.check_for_duplicates:
+            transaction = self.remove_duplicate_transactions(transaction)
+            
+        if len(transaction) > 0:
+            self.transactions = self.transactions.append(transaction, 
+                                                         ignore_index=True)
+            # update balance
+            self.balance = self.transactions['amount'].sum()
+            
+            self.transactions.to_csv(os.path.join(self.path, self.filename + 
+                                                  '.csv'))
+        else:
+            warn('Transaction already exists! Did not add.')
+                
             
 def rmspace(s):
     """Removes extra whitespace and returns nan, if empty string."""
