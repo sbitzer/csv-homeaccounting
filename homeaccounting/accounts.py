@@ -235,7 +235,51 @@ class account(metaclass=ABCMeta):
                           index=days)
         
         return df
-                       
+        
+        
+    def find(self, bdate=None, vdate=None, agent=None, t_type=None, 
+             description=None, amount=None, case=False):
+        """Find transactions matching flexible criteria.
+        
+        Each column of the transaction DataFrame has its corresponding keyword
+        argument here. Transactions are returned whose values match those given
+        to the function. 
+        
+        Dates (bdate and vdate) can be given in the usual formats (e.g. 
+        '20141115', '15.11.2014', or as any datetime-derived object). 
+        
+        The string columns will be searched for strings which contain the given
+        search string. Default is case insensitive search. Change this by 
+        setting case=True.
+        """
+        
+        if bdate is not None:
+            bdate = parse_date(bdate)
+            
+        if vdate is not None:
+            vdate = parse_date(vdate)
+            
+        if agent is None:
+            a_match = pd.np.ones(len(self.transactions), dtype=bool)
+        else:
+            a_match = self.transactions['agent'].str.contains(agent, case)
+            
+        if t_type is None:
+            t_match = pd.np.ones(len(self.transactions), dtype=bool)
+        else:
+            t_match = self.transactions['type'].str.contains(t_type, case)
+            
+        if description is None:
+            d_match = pd.np.ones(len(self.transactions), dtype=bool)
+        else:
+            d_match = self.transactions['description'].str.contains(description, case)
+
+        return self.transactions[
+            are_equal_or_nan(self.transactions['booking date'], bdate) &
+            are_equal_or_nan(self.transactions['value date'], vdate) & 
+            a_match & t_match & d_match & 
+            are_equal_or_nan(self.transactions['amount'], amount)]
+
         
 class ing_diba_giro(account):
     """An implementation of account specific for ING DiBa currency accounts in Germany."""
@@ -351,9 +395,18 @@ def rmspace(s):
         
         
 def are_equal_or_nan(array, val):
-    """checks whether val is in array, including when val is nan"""
-    return (array == val) | ((array != array) & (val != val))
+    """Checks whether val is in array, including when val is nan.
     
+    If val is None, it's treated as a wildcard which is matched by all elements
+    in array.
+    """
+    
+    if val is None:
+        return pd.np.ones(len(array), dtype=bool)
+    else:
+        return (array == val) | ((array != array) & (val != val))
+    
+        
 def parse_date(date):
     """Parse the date into pandas Timestamp, handle German dd.mm.yyyy manually"""
     if type(date) is not pd.Timestamp:
