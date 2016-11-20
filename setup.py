@@ -22,5 +22,11 @@ setup(
                 'License :: OSI Approved :: BSD License',
                 'Programming Language :: Python :: 3',
                 'Topic :: Office/Business :: Financial :: Accounting',
-                 ]
+                 ],
+    install_requires=[
+        'pandas',
+        'matplotlib',
+        'ystockquote',
+        'forex-python'
+    ]
 )
