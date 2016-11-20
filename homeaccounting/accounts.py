@@ -184,6 +184,8 @@ class account(metaclass=ABCMeta):
                 date = date.replace(day=1) - dt.timedelta(1)
         else:
             date = parse_date(month_id)
+            # parse_date returns a pandas timestamp - convert to date
+            date = date.date()
             
         first_day = date.replace(day=1)
         last_day = date.replace(day=calendar.monthrange(date.year, date.month)[1])
@@ -191,7 +193,7 @@ class account(metaclass=ABCMeta):
         tr = self.transactions[(self.transactions[datetype] >= first_day) & 
                                (self.transactions[datetype] <= last_day)]
         
-        return tr.sort_values(datetype)
+        return tr.sort_values(datetype), last_day
         
         
     def get_last(self, N=3, datetype='value date'):
@@ -200,6 +202,39 @@ class account(metaclass=ABCMeta):
         tr = self.transactions.sort_values(datetype, ascending=False)
         
         return tr.iloc[:min(N, len(tr))]
+                       
+                       
+    def get_monthly_balance(self, months=0, datetype='value date'):
+        """Gives summary of transactions in selected months.
+        
+        months is either a single month_id as in get_month, or an iterable over
+               such ids
+        
+        datetype is the type of date that is used to select transactions for 
+                 the corresponding month, see get_month
+                 
+        returns a pandas DataFrame with the last day of the selected month as
+                index, each row consists of 'debit' (total amount of account
+                debits), 'credit' (total, negative amount of account credits), 
+                'balance' (debit + credit)
+        """
+        if not hasattr(months, '__iter__') or type(months) == str:
+            months = [months]
+
+        days = []
+        balances = []
+        for month in months:
+            tr, day = self.get_month(month, datetype=datetype)
+            days.append(day)
+            amounts = tr['amount']
+            balances.append([amounts[amounts>0].sum(), 
+                             amounts[amounts<0].sum(),
+                             amounts.sum()])
+            
+        df = pd.DataFrame(balances, columns=['debit', 'credit', 'balance'],
+                          index=days)
+        
+        return df
                        
         
 class ing_diba_giro(account):
