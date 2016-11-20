@@ -211,6 +211,24 @@ class manual_current(account):
     def __init__(self, name='default manual', **account_args):
         super().__init__(name=name, **account_args)
     
+        
+    def load_transactions(self):
+        """Load previously processed transactions, store as DataFrame."""
+        
+        fullpath_all = os.path.join(self.path, self.filename + '.csv')
+        
+        # load previously processed transactions, if exist
+        if os.path.isfile(fullpath_all):
+            self.transactions = pd.read_csv(fullpath_all, index_col=0, 
+                                            parse_dates=[1, 2])
+        else:
+            self.transactions = pd.DataFrame(columns=('booking date', 
+                'value date', 'agent', 'type', 'description', 'amount'))
+            
+        # update balance
+        self.balance = self.transactions['amount'].sum()
+        
+        
     def get_transactions_from_csv(self, filepath):
         """As this is a manual account no transactions will be loaded."""
         return pd.DataFrame(columns=('booking date', 'value date', 'agent', 
@@ -218,7 +236,7 @@ class manual_current(account):
         
     def add_transaction(self, vdate, agent, desc, amount, bdate=None, 
                         t_type=''):
-        """add a transaction manually to the account."""
+        """Add a transaction manually to the account."""
         
         # check format of vdate
         vdate = parse_date(vdate)
