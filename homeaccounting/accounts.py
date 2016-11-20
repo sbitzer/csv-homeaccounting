@@ -195,6 +195,8 @@ class account(metaclass=ABCMeta):
         
         
     def get_last(self, N=3, datetype='value date'):
+        """Get last N transactions."""
+        
         tr = self.transactions.sort_values(datetype, ascending=False)
         
         return tr.iloc[:min(N, len(tr))]
