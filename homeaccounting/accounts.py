@@ -10,6 +10,8 @@ import csv
 import os.path
 from os import scandir
 import pandas as pd
+import datetime as dt
+import calendar
 
 class account(metaclass=ABCMeta):
     
@@ -161,6 +163,41 @@ class account(metaclass=ABCMeta):
     def __str__(self):
         return self.name + ': %8.2f %s' % (self.balance, self.currency)
         
+    
+    def get_month(self, month_id=0, datetype='value date'):
+        """Get transactions from a given month.
+        
+        month_id may be an integer, then it is the month_id-th month before the 
+                 current one (both negative and positive have the same effect)
+                 may also be a date object or a string in the form yyyy-mm
+        datetype is either 'value date' (default) or 'booking date'
+                 determines which type of date is used to select transactions
+                 
+        returns a DataFrame with the corresponding transactions
+        """
+        
+        if type(month_id) == int:
+            date = dt.date.today()
+            for m_it in range(abs(month_id)):
+                # get a day in the previous month
+                date = date.replace(day=1) - dt.timedelta(1)
+        else:
+            date = parse_date(month_id)
+            
+        first_day = date.replace(day=1)
+        last_day = date.replace(day=calendar.monthrange(date.year, date.month)[1])
+        
+        tr = self.transactions[(self.transactions[datetype] >= first_day) & 
+                               (self.transactions[datetype] <= last_day)]
+        
+        return tr.sort_values(datetype)
+        
+        
+    def get_last(self, N=3, datetype='value date'):
+        tr = self.transactions.sort_values(datetype, ascending=False)
+        
+        return tr.iloc[:min(N, len(tr))]
+                       
         
 class ing_diba_giro(account):
     """An implementation of account specific for ING DiBa currency accounts in Germany."""
