@@ -384,7 +384,126 @@ class manual_current(account):
         else:
             warn('Transaction already exists! Did not add.')
                 
+
+class credit_subaccount():
+    """Keeps track of a credit given to someone based on transactions in an account.
+    
+        Uses search terms to find transactions modifying the credit balance and
+        computes daily interests rates for a given annual equivalent rate.
+    """
+    
+    def __init__(self, acc, desc, aer, tr_inds=pd.np.array([]), agent=None,
+                 verbose=True):
+        """Define a credit account based on a standard current account.
+        
+            The credit account is solely based on selected transactions of the
+            associated current account which can either be given as index into
+            the transaction list, or using search terms in the description 
+            and/or agent of the transactions.
             
+            Arguments
+            ---------
+            acc : account
+                the associated current account.
+                
+            desc : string
+                search pattern for description of transactions.
+                
+            aer : number (percent)
+                interest rate to be payable, as `annual equivalent rate`_
+            
+            tr_inds : 1D numpy array, default empty array
+                indeces into transaction list of acc, pointing to transactions
+                which cannot be identified by the search patterns
+                
+            agent : string, default None
+                search pattern for agent of transactions, will be combined with
+                search pattern for description
+                
+            verbose : bool, default True
+                whether to print state of credit account upon creation
+                
+            Returns
+            -------
+            instance of credit_subaccount defined by arguments
+                
+            .. _annual equivalent rate: https://en.wikipedia.org/wiki/Effective_interest_rate
+        """
+        self.acc = acc
+        self.desc = desc
+        self.agent = agent
+        self.tr_inds = tr_inds
+        self.aer = aer
+        
+        if verbose:
+            print(self.__str__())
+        
+    def get_transactions(self):
+        """Returns transactions associated with the credit, sorted by value date."""
+        
+        tr = self.acc.find(description=self.desc, agent=self.agent)
+        inds = pd.np.unique(pd.np.r_[self.tr_inds, tr.index])
+        return self.acc.transactions.loc[inds].sort_values('value date')
+        
+    def get_state(self):
+        """Calculate and return current state of credit account.
+        
+            Calculates current balance of credit account including accrued 
+            interest and already made back payments. Interest is calculated on
+            a daily basis for all intermediate balances.
+        
+            Returns
+            -------
+            balance
+                outstanding credit including interest that still needs to be 
+                payed back
+            
+            credit
+                total given credit without interest and already made payments
+                
+            interest
+                total interest accrued until today
+        """
+        tr = self.get_transactions()
+        
+        lastdate = tr.iloc[0]['value date']
+        credit = 0
+        balance = 0
+        interest = 0
+        for row in tr.itertuples():
+            # compute interest between last value date and current value date
+            dt = (row._2 - lastdate).days
+            lastdate = row._2
+            factor = (1 + self.aer /100 / 365) ** dt
+            interest += (factor - 1) * balance
+            
+            # update balance with computed interest
+            balance *= factor
+            
+            # update balance with new transaction
+            balance += row.amount
+            
+            # save credit
+            credit += pd.np.min([row.amount, 0])
+            
+        # add interest from last transaction to today
+        dt = (pd.datetime.today() - lastdate).days
+        factor = (1 + self.aer / 100 / 365) ** dt
+        interest += (factor - 1) * balance
+        balance *= factor
+        
+        return balance, credit, interest
+    
+    def __str__(self):
+        balance, credit, interest = self.get_state()
+        
+        s =  'current balance:    %+8.2f\n' % balance
+        s += 'total given credit: %+8.2f\n' % credit
+        s += 'accrued interest:   %+8.2f' % interest
+        
+        return s
+
+        
 def rmspace(s):
     """Removes extra whitespace and returns nan, if empty string."""
     s = " ".join(s.split())
