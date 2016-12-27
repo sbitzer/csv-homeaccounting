@@ -13,6 +13,7 @@ import pandas as pd
 import datetime as dt
 import calendar
 from warnings import warn
+import matplotlib.pyplot as plt
 
 class account(metaclass=ABCMeta):
     
@@ -280,6 +281,63 @@ class account(metaclass=ABCMeta):
             a_match & t_match & d_match & 
             are_equal_or_nan(self.transactions['amount'], amount)]
 
+            
+    def plot_history(self, what='balance', startdate=None, enddate=None, 
+                     datetype='value date'):
+        """Visualises the transaction history.
+        
+        Arguments
+        ---------
+        what : str, default 'balance'
+            what exactly should be plotted; 
+            'balance': balance of the account at the specified dates 
+            'amount':  individual transaction amounts
+            'cumsum':  cumulative sum of the transaction amounts in the 
+                       selected time period; equals balance when the startdate
+                       is equal to or before the date of the first transaction
+        
+        startdate : date (str or object), default None
+            start date from which transactions should be shown, will be parsed
+            into date format
+            
+        enddate : date (str or object), default None
+            last date from which transactions should be shown, will be parsed
+            into date format
+            
+        datetype : str, default 'value date'
+            either 'booking date' or 'value date'
+            
+        Returns
+        -------
+        matplotlib figure instance
+        """
+        if startdate is None:
+            startdate = self.transactions[datetype].min()
+        else:
+            startdate = parse_date(startdate)
+        if enddate is None:
+            enddate = pd.datetime.today()
+        else:
+            enddate = parse_date(enddate)
+        
+        tr = self.transactions
+        tr = tr.sort_values(datetype)
+        
+        if what == 'balance':
+            tr['balance'] = tr['amount'].cumsum()
+            
+        tr = tr[(tr[datetype] >= startdate) & (tr[datetype] <= enddate)]
+        
+        if what == 'cumsum':
+            tr['cumsum'] = tr['amount'].cumsum()
+        
+        fig = plt.figure()
+        plt.plot(tr[datetype], tr[what])
+        fig.autofmt_xdate()
+        plt.ylabel(what)
+        
+        return fig
+        
         
 class ing_diba_giro(account):
     """An implementation of account specific for ING DiBa currency accounts in Germany."""
