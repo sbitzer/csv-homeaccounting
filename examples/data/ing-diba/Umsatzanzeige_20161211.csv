@@ -1,0 +1,13 @@
+"Umsatzanzeige vom 11.12.2016 20:17"
+"Kunde";"Max Mustermann"
+
+"Konto";"DE00000000000000000000"
+"Zeitraum";"11.11.2016 - 11.12.2016"
+"Kontosaldo";"3.523,03";"EUR"
+
+"Buchung";"Valuta";"Auftraggeber/Empfänger";"Buchungstext";"Verwendungszweck";"Betrag";"Währung";"Saldo";"Währung"
+"09.12.2016";"08.12.2016";"agent 34";"type 1";"description 102";"-80,00";"EUR";"3.523,03";"EUR"
+"07.12.2016";"07.12.2016";"agent 100";"type 3";"description 140";"-34,99";"EUR";"3.603,03";"EUR"
+"07.12.2016";"07.12.2016";"agent 58";"type 3";"description 105";"-135,00";"EUR";"3.638,02";"EUR"
+"07.12.2016";"07.12.2016";"agent 108";"type 1";"description 106";"-7,00";"EUR";"3.773,02";"EUR"
+
