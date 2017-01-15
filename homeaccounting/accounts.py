@@ -125,6 +125,29 @@ class account(metaclass=ABCMeta):
             print('Added %d new transactions.' % N_new)
 
 
+    def remove_transactions(self, ids):
+        """remove transactions by id
+        
+        Is useful when you added a wrong transaction manually. Updates the
+        csv-file.
+        
+        Arguments
+        ---------
+        ids : int or iterable of ints
+            the ids of the transactions to be removed
+            
+        Return
+        ------
+        removed transactions : DataFrame
+        """
+        tr = self.transactions.loc[ids]
+        self.transactions.drop(ids, inplace=True)
+        self.transactions.to_csv(os.path.join(self.path, self.filename + '.csv'))
+        
+        print('Removed transactions:')
+        return tr
+        
+            
     def remove_duplicate_transactions(self, new_transactions):
         """Removes transactions from new_transactions that were already processed.
         
