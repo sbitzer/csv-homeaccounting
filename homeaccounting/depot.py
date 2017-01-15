@@ -110,13 +110,17 @@ class depot(object):
         
         names = []
         balances = []
+        inconvertible = pd.DataFrame(columns=['name', 'balance', 'currency'])
 
         for acc in self.accounts:
-            names.append(acc.name)
-            if acc.currency == self.currency:
-                balances.append(acc.balance)
-            else:
-                balances.append(convert(acc.balance, acc.currency, self.currency))
+            balance = convert(acc.balance, acc.currency, self.currency)
+            if np.isnan(balance):
+                inconvertible = pd.concat([inconvertible, pd.DataFrame(
+                    {'name': [acc.name], 'balance': [acc.balance], 
+                     'currency': [acc.currency]})])
+            else: 
+                names.append(acc.name)
+                balances.append(balance)
         
         numzeros = math.ceil(math.log10(max(balances)))
         total = sum(balances)
@@ -129,3 +133,5 @@ class depot(object):
         ax = plt.axes(aspect=1)
         ax.pie(balances, labels=names, autopct=balfun, colors=cols)
         ax.set_title('balances in ' + self.currency + ' (total: %.2f)' % total)
+        
+        return inconvertible
