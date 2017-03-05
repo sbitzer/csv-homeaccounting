@@ -9,12 +9,12 @@ from setuptools import setup
 
 setup(
     name='csv-homeaccounting',
-    version='0.1.0',
+    version='0.2.0',
     author='Sebastian Bitzer',
     author_email='official@sbitzer.eu',
     packages=['homeaccounting'],
-    description=('Keeps track of finances at home based on csv-files that can '
-                 'typically be downloaded from online banking websites.'),
+    description=('A low-tech solution for keeping on top of your finances '
+                 'across different institutions and asset classes.'),
     classifiers=[
                 'Development Status :: 3 - Alpha',
                 'Operating System :: OS Independent',
