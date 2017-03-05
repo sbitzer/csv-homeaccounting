@@ -13,7 +13,7 @@ setup(
     author='Sebastian Bitzer',
     author_email='official@sbitzer.eu',
     packages=['homeaccounting'],
-    description=('A low-tech solution for keeping on top of your finances '
+    description=('A low-tech solution for staying on top of your finances '
                  'across different institutions and asset classes.'),
     classifiers=[
                 'Development Status :: 3 - Alpha',

@@ -1,7 +1,7 @@
 csv-homeaccounting
 ==================
 
-A low-tech solution for keeping on top of your finances across different institutions and asset classes.
+A low-tech solution for staying on top of your finances across different institutions and asset classes.
 
 
 Features
