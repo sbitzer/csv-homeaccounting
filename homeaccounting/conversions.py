@@ -39,6 +39,10 @@ def convert(x, from_symbol, to_symbol):
         warn('converter: cannot currently convert assets to or from ISIN, '
              'returning NaN!')
         return np.nan
+    elif from_type == 'altcoin' or to_type == 'altcoin':
+        warn('converter: cannot currently convert assets to or from altcoins, '
+             'returning NaN!')
+        return np.nan
     elif to_type is None:
         warn('converter: did not recognise to_symbol "%s", returning NaN!' % 
              to_symbol)
@@ -112,5 +116,7 @@ def identify_symbol(symbol):
         return 'currency'
     elif groups[0] in ['BTC', 'XBT']:
         return 'bitcoin'
+    elif groups[0] in ['ETH', 'ZEC']:
+        return 'altcoin'
     else:
         return 'yahoo'
