@@ -116,7 +116,7 @@ def identify_symbol(symbol):
         return 'currency'
     elif groups[0] in ['BTC', 'XBT']:
         return 'bitcoin'
-    elif groups[0] in ['ETH', 'ZEC']:
+    elif groups[0] in ['ETH', 'ZEC', 'BCH']:
         return 'altcoin'
     else:
         return 'yahoo'
