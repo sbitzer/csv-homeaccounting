@@ -12,6 +12,7 @@ from os import scandir
 import pandas as pd
 import datetime as dt
 import calendar
+from collections import deque
 from warnings import warn
 import matplotlib.pyplot as plt
 
@@ -360,6 +361,44 @@ class account(metaclass=ABCMeta):
         plt.ylabel(what)
         
         return fig
+    
+    
+    def get_ages(self):
+        """Get ages of currently held assets.
+        
+        For knowing how long you have held the asset - useful for tax purposes.
+        Calculation is based on first-in first-out principle, i.e., it is 
+        assumed that the first few units that entered the account also leave it
+        first.
+        """
+        now = dt.datetime.today()
+        
+        amount = deque([])
+        age = deque([])
+        for trans in self.transactions.sort_values('value date').itertuples():
+            # this should be the value date
+            vdate = trans._2
+            
+            # if amount is positive you got new assets with a new age
+            if trans.amount > 0:
+                amount.append(trans.amount)
+                age.append(now - vdate)
+            # if amount is negative, delete assets starting with the oldest
+            else:
+                am = trans.amount
+                while am < 0:
+                    diff = amount[0] + am
+                    if diff >= 0:
+                        # update remaining amount of that age
+                        amount[0] = diff
+                        am = 0
+                    else:
+                        # pop the assets with that age
+                        am = diff
+                        amount.popleft()
+                        age.popleft()
+                        
+        return pd.DataFrame({'age': age, 'amount': amount})
         
         
 class ing_diba_giro(account):
