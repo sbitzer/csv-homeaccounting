@@ -135,3 +135,43 @@ class depot(object):
         ax.set_title('balances in ' + self.currency + ' (total: %.2f)' % total)
         
         return inconvertible
+    
+    
+    def get_ages(self, sellyear=None, exclude=None):
+        """Calls get_ages of each account and returns combined results.
+        
+        Arguments
+        ---------
+        sellyear : int or null-form, default None
+            if given, only return ages for sells made in that year
+            if null-form (anything recognised by pd.isnull or one of the
+            strings 'nan', 'nat', 'null') return only ages of currently held 
+            units
+        exclude : str or list of str, default None
+            name(s) of account(s) that should be excluded from operation
+            
+        Returns
+        -------
+        DataFrame with columns 'age', 'amount', 'date'
+        for already sold units:
+            age - how long you have held the units from buy to sell
+            amount - how many units were sold with that age
+            date - date of sell
+        for units still held:
+            age - how long you have been holding these from buy
+            amount - how many units with that age you hold
+            date - not assigned (NaN/NaT)
+        """
+        if type(exclude) is str:
+            exclude = [exclude]
+        elif exclude is None:
+            exclude = []
+            
+        selldfs = []
+        names = []
+        for acc in self._accounts:
+            if acc.name not in exclude:
+                selldfs.append(acc.get_ages(sellyear))
+                names.append(acc.name)
+                
+        return pd.concat(selldfs, keys=names, names=['accname', 'index'])
