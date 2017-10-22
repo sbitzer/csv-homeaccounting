@@ -363,43 +363,92 @@ class account(metaclass=ABCMeta):
         return fig
     
     
-    def get_ages(self):
-        """Get ages of currently held assets.
+    def get_ages(self, sellyear=None):
+        """Get ages of currently held and previously sold assets.
         
         For knowing how long you have held the asset - useful for tax purposes.
         Calculation is based on first-in first-out principle, i.e., it is 
         assumed that the first few units that entered the account also leave it
         first.
+        
+        Arguments
+        ---------
+        sellyear : int, default None
+            if given, only return ages for sells made in that year
+        
+        Returns
+        -------
+        DataFrame with columns 'age', 'amount', 'date'
+        for already sold units:
+            age - how long you have held the units from buy to sell
+            amount - how many units were sold with that age
+            date - date of sell
+        for units still held:
+            age - how long you have been holding these from buy
+            amount - how many units with that age you hold
+            date - not assigned (NaN/NaT)
         """
         now = dt.datetime.today()
         
-        amount = deque([])
-        age = deque([])
+        # will be filled with information of a buy consisting of
+        # [amount still available for sell, date]
+        buys = deque([])
+        sell_age = []
+        sell_date = []
+        sell_amount = []
         for trans in self.transactions.sort_values('value date').itertuples():
             # this should be the value date
             vdate = trans._2
             
             # if amount is positive you got new assets with a new age
             if trans.amount > 0:
-                amount.append(trans.amount)
-                age.append(now - vdate)
+                buys.append([trans.amount, vdate])
+            
             # if amount is negative, delete assets starting with the oldest
             else:
                 am = trans.amount
                 while am < 0:
-                    diff = amount[0] + am
-                    if diff >= 0:
-                        # update remaining amount of that age
-                        amount[0] = diff
+                    # add new sell age and date
+                    sell_age.append(vdate - buys[0][1])
+                    sell_date.append(vdate)
+                    
+                    diff = buys[0][0] + am
+                    
+                    # if not all of the oldest available buy was spent
+                    if diff > 0:
+                        # update remaining amount
+                        buys[0][0] = diff
+                        
+                        # add amount to current sell
+                        sell_amount.append(am)
                         am = 0
                     else:
-                        # pop the assets with that age
-                        am = diff
-                        amount.popleft()
-                        age.popleft()
+                        # add full remaining amount of buy to sell
+                        sell_amount.append(-buys[0][0])
                         
-        return pd.DataFrame({'age': age, 'amount': amount})
+                        # pop the buy
+                        buys.popleft()
+                        
+                        # update amount to sell
+                        am = diff
+                        
+        # add remaining buys without sell date
+        for buy in buys:
+            sell_age.append(now - buy[1])
+            sell_date.append(pd.np.nan)
+            sell_amount.append(buy[0])
+                        
+        agedf = pd.DataFrame({'age': sell_age, 
+                              'amount': sell_amount,
+                              'date': sell_date})
         
+        # filter by year
+        if sellyear is not None:
+            yearind = agedf.date.map(lambda d: d.year == sellyear).values
+            agedf = agedf[yearind]
+        
+        return agedf
+    
         
 class ing_diba_giro(account):
     """An implementation of account specific for ING DiBa currency accounts in Germany."""
