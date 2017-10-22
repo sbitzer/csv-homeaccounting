@@ -140,6 +140,8 @@ class depot(object):
     def get_ages(self, sellyear=None, exclude=None):
         """Calls get_ages of each account and returns combined results.
         
+        See get_ages of account for further information.
+        
         Arguments
         ---------
         sellyear : int or null-form, default None
