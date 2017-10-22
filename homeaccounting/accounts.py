@@ -364,12 +364,17 @@ class account(metaclass=ABCMeta):
     
     
     def get_ages(self, sellyear=None):
-        """Get ages of currently held and previously sold assets.
+        """Get ages of currently held and previously sold units of the asset.
         
-        For knowing how long you have held the asset - useful for tax purposes.
+        For knowing how long you have held the units - useful for tax purposes.
         Calculation is based on first-in first-out principle, i.e., it is 
         assumed that the first few units that entered the account also leave it
-        first.
+        first. If the account can hold debts (negative balances), these will be
+        offset against future buys so that only the age of units that were 
+        actually possessed are returned. For example, if you have a balance of
+        -5 units at some point and then buy 2 units, this will reduce your
+        debt, but the 2 bought units will not occur in the list of later sold
+        units.
         
         Arguments
         ---------
@@ -398,6 +403,8 @@ class account(metaclass=ABCMeta):
         
         now = dt.datetime.today()
         
+        debt = 0
+        
         # will be filled with information of a buy consisting of
         # [amount still available for sell, date]
         buys = deque([])
@@ -410,35 +417,51 @@ class account(metaclass=ABCMeta):
             
             # if amount is positive you got new assets with a new age
             if trans.amount > 0:
-                buys.append([trans.amount, vdate])
+                # if there is debt from previous sells without funds
+                if debt > 0:
+                    # offset the newly bought units with the debt
+                    diff = trans.amount - debt
+                    if diff > 0:
+                        buys.append([diff, vdate])
+                        debt = 0
+                    else:
+                        debt = -diff
+                else:
+                    buys.append([trans.amount, vdate])
             
             # if amount is negative, delete assets starting with the oldest
             else:
                 am = trans.amount
                 while am < 0:
-                    # add new sell age and date
-                    sell_age.append(vdate - buys[0][1])
-                    sell_date.append(vdate)
-                    
-                    diff = buys[0][0] + am
-                    
-                    # if not all of the oldest available buy was spent
-                    if diff > 0:
-                        # update remaining amount
-                        buys[0][0] = diff
+                    # if there were units available at the time of the sale
+                    if buys:
+                        # add new sell age and date
+                        sell_age.append(vdate - buys[0][1])
+                        sell_date.append(vdate)
                         
-                        # add amount to current sell
-                        sell_amount.append(am)
-                        am = 0
+                        diff = buys[0][0] + am
+                        
+                        # if not all of the oldest available buy was spent
+                        if diff > 0:
+                            # update remaining amount
+                            buys[0][0] = diff
+                            
+                            # add amount to current sell
+                            sell_amount.append(am)
+                            am = 0
+                        else:
+                            # add full remaining amount of buy to sell
+                            sell_amount.append(-buys[0][0])
+                            
+                            # pop the buy
+                            buys.popleft()
+                            
+                            # update amount to sell
+                            am = diff
                     else:
-                        # add full remaining amount of buy to sell
-                        sell_amount.append(-buys[0][0])
-                        
-                        # pop the buy
-                        buys.popleft()
-                        
-                        # update amount to sell
-                        am = diff
+                        # store the debt for offset against upcoming buys
+                        debt -= am
+                        am = 0
                         
         # add remaining buys without sell date
         for buy in buys:
