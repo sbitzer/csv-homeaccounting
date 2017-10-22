@@ -373,8 +373,11 @@ class account(metaclass=ABCMeta):
         
         Arguments
         ---------
-        sellyear : int, default None
+        sellyear : int or null-form, default None
             if given, only return ages for sells made in that year
+            if null-form (anything recognised by pd.isnull or one of the
+            strings 'nan', 'nat', 'null') return only ages of currently held 
+            units
         
         Returns
         -------
@@ -388,6 +391,11 @@ class account(metaclass=ABCMeta):
             amount - how many units with that age you hold
             date - not assigned (NaN/NaT)
         """
+        if sellyear is not None:
+            if (type(sellyear) is str and sellyear.lower() in ['nan', 'nat', 
+                'null']):
+                sellyear = pd.NaT
+        
         now = dt.datetime.today()
         
         # will be filled with information of a buy consisting of
@@ -435,7 +443,7 @@ class account(metaclass=ABCMeta):
         # add remaining buys without sell date
         for buy in buys:
             sell_age.append(now - buy[1])
-            sell_date.append(pd.np.nan)
+            sell_date.append(pd.NaT)
             sell_amount.append(buy[0])
                         
         agedf = pd.DataFrame({'age': sell_age, 
@@ -444,7 +452,11 @@ class account(metaclass=ABCMeta):
         
         # filter by year
         if sellyear is not None:
-            yearind = agedf.date.map(lambda d: d.year == sellyear).values
+            if pd.isnull(sellyear):
+                yearind = agedf.date.map(lambda d: pd.isnull(d.year)).values
+            else:
+                yearind = agedf.date.map(lambda d: d.year == sellyear).values
+            
             agedf = agedf[yearind]
         
         return agedf
