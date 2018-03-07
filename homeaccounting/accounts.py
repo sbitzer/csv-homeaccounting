@@ -16,7 +16,64 @@ from collections import deque
 from warnings import warn
 import matplotlib.pyplot as plt
 
+trfieldnames = dict(bdate='booking date', vdate='value date', 
+                    agent='agent', t_type='type', 
+                    description='description', amount='amount')
+
 class account(metaclass=ABCMeta):
+    
+    @staticmethod
+    def flexible_transaction_matcher(
+            tr1, tr2, bdate=None, vdate=None, agent=None, t_type=None, 
+            description=None, amount=None, case=False, minoverlap=6, 
+            from_start=False):
+        """Whether two transactions match according to flexible criteria.
+        
+        This function returns True, if two given transactions match according 
+        to some desired criteria, otherwise returns False. Criteria are defined
+        by selecting a match criterion for each possible field of a 
+        transaction as provided through keyword arguments. Currently 
+        implemented match criteria:
+            None     - ignore this field when matching
+            'equal'  - field values are matched with ==
+            'substr' - field values must have common substring as defined by
+                       additional keyword arguments as described below
+                       
+        case : bool, default False
+            whether string matching should be case-sensitive
+        minoverlap : int, default 6
+            mininum number of characters that should match between two string
+            values
+        from_start : bool, default False
+            whether substrings should be identified from the start of the 
+            string values, i.e., they need to match on the first characters;
+            if False, the longest common substring is found and it is checked
+            whether that is at least minoverlap long
+        """
+        for abbrv, fieldname in trfieldnames.items():
+            matchval = eval(abbrv)
+            
+            if matchval == 'equal':
+                if tr1[fieldname] != tr2[fieldname]:
+                    return False
+            
+            elif matchval == 'substr':
+                str1 = tr1[fieldname]
+                str2 = tr2[fieldname]
+                if not case:
+                    str1 = str1.lower()
+                    str2 = str2.lower()
+                
+                if from_start:
+                    if not str1.startswith(str2[:minoverlap]):
+                        return False
+                else:
+                    lcs = longest_common_substring(str1, str2)
+                    if len(lcs) < minoverlap:
+                        return False
+        
+        return True
+    
     
     def __init__(self, name='base_account', filename=None, path='.', 
                  check_for_duplicates=True, currency='EUR'):
@@ -190,6 +247,34 @@ class account(metaclass=ABCMeta):
         return self.name + ': %8.2f %s' % (self.balance, self.currency)
         
     
+    def get_period(self, period_id, datetype='value date', period='month'):
+        """Get transactions for the selected period. See get_year, get_month."""
+        period_id = get_period_id(period_id, period)
+        
+        date = dt.date.today()
+        
+        if period == 'month':
+            for m_it in range(abs(period_id)):
+                # get a day in the previous month
+                date = date.replace(day=1) - dt.timedelta(1)
+                
+            first_day = date.replace(day=1)
+            last_day = date.replace(day=calendar.monthrange(
+                    date.year, date.month)[1])
+        elif period == 'year':
+            first_day = date.replace(
+                    year=date.year - abs(period_id), month=1, day=1)
+            last_day = date.replace(
+                    year=date.year - abs(period_id), month=12, day=31)
+        else:
+            raise ValueError('Period not recognised!')
+            
+        tr = self.transactions[(self.transactions[datetype] >= first_day) & 
+                               (self.transactions[datetype] <= last_day)]
+        
+        return tr.sort_values(datetype), last_day
+    
+    
     def get_month(self, month_id=0, datetype='value date'):
         """Get transactions from a given month.
         
@@ -202,23 +287,22 @@ class account(metaclass=ABCMeta):
         returns a DataFrame with the corresponding transactions
         """
         
-        if type(month_id) == int:
-            date = dt.date.today()
-            for m_it in range(abs(month_id)):
-                # get a day in the previous month
-                date = date.replace(day=1) - dt.timedelta(1)
-        else:
-            date = parse_date(month_id)
-            # parse_date returns a pandas timestamp - convert to date
-            date = date.date()
-            
-        first_day = date.replace(day=1)
-        last_day = date.replace(day=calendar.monthrange(date.year, date.month)[1])
+        return self.get_period(month_id, datetype)
+    
+    
+    def get_year(self, year_id=0, datetype='value date'):
+        """Get transactions from a given year.
         
-        tr = self.transactions[(self.transactions[datetype] >= first_day) & 
-                               (self.transactions[datetype] <= last_day)]
+        year_id may be an integer, then it is the year_id-th year before the 
+                 current one (both negative and positive have the same effect)
+                 may also be a date object or a string in the form yyyy-mm
+        datetype is either 'value date' (default) or 'booking date'
+                 determines which type of date is used to select transactions
+                 
+        returns a DataFrame with the corresponding transactions
+        """
         
-        return tr.sort_values(datetype), last_day
+        return self.get_period(year_id, datetype, period='year')
         
         
     def get_last(self, N=3, datetype='value date'):
@@ -304,6 +388,106 @@ class account(metaclass=ABCMeta):
             are_equal_or_nan(self.transactions['value date'], vdate) & 
             a_match & t_match & d_match & 
             are_equal_or_nan(self.transactions['amount'], amount)]
+    
+    
+    def find_reoccurring(self, start=-4, end=-1, period='month', 
+                         exactly_one=True, **matcher_kwargs):
+        """Finds transactions that reoccur every month/year.
+        
+        Selects a range of transactions from which reoccurring transactions 
+        should be identified. Reoccurring transactions will be defined by the
+        keyword arguments passed to the flexible_transaction_matcher (see 
+        below).
+        
+        Arguments
+        ---------
+        start : int, or date format, default -4
+            how far back should be searched? E.g., if start=-4 and now is July
+            you would consider transactions starting from 1st of March as March
+            is the 4th month before July; if a date or date format string 
+            (yyyy-mm) is given the month of that date is the first considered
+        end : int, or date format, default -1
+            most recent month that should be included in search. E.g., end=-1
+            selects all transactions up to the previous month; if a date or 
+            date format string (yyyy-mm) is given the month of that date is the
+            last considered
+        period : str, default 'month'
+            time periods to consider, 'month' for transactions reoccurring 
+            monthly and 'year' for yearly transactions
+        exactly_one : bool, default True
+            whether to only return matched transactions when each considered
+            period only contains exactly one of them
+        
+        remaining keyword arguments are passed to flexible_transaction_matcher,
+        see there for further explanation; note that here defaults are 
+        overwritten with:
+        
+        t_type = 'equal'
+        agent = 'substr'
+        from_start = True
+        
+        This setting identifies reoccurring transactions relatively loosely, 
+        only requiring the transaction type to match and the agent string to 
+        begin with the same substring (of length 6 by default)
+        
+        returns transaction DataFrame with all matched transactions
+        """
+        assert start < end, "start month must be before end month"
+        
+        # apply matcher defaults
+        if 'agent' not in matcher_kwargs.keys():
+            matcher_kwargs['agent'] = 'substr'
+        if 't_type' not in matcher_kwargs.keys():
+            matcher_kwargs['t_type'] = 'equal'
+        if 'from_start' not in matcher_kwargs.keys():
+            matcher_kwargs['from_start'] = True
+        
+        first = get_period_id(start, period)
+        last = get_period_id(end, period)
+        
+        pids = [pid for pid in range(first, last+1)]
+        
+        df = pd.concat(
+                [self.get_period(pid, period=period)[0] for pid in pids],
+                keys=pids, names=['pid', 'trid'])
+        
+        # period with fewest transactions
+        pfew = df.groupby('pid').agent.count().idxmin()
+        
+        # go through each transaction and check whether there are matching
+        # transactions in all of the other periods
+        reoccurring = []
+        for _, trans in df.loc[pfew].iterrows():
+            matching = []
+            
+            # go through all other periods
+            for pid in set(pids).difference([pfew]):
+                ismatch = df.loc[pid].apply(
+                        self.flexible_transaction_matcher, axis=1, 
+                        args=(trans,), **matcher_kwargs)
+                if ismatch.any():
+                    if exactly_one and ismatch.sum() > 1:
+                        matching = []
+                        break
+                    
+                    matching.append(df.loc[pid][ismatch].index.values)
+                else:
+                    matching = []
+                    # do not bother with the remaining periods
+                    break
+                
+            if matching:
+                matching = pd.np.concatenate(
+                        [pd.np.array([trans.name])] + matching)
+                
+                # drop matched transactions to prevent rematching with other
+                df.drop(matching[1:], level='trid', inplace=True)
+                
+                reoccurring.append(self.transactions.loc[matching]
+                                   .sort_values('value date'))
+        
+        return pd.concat(reoccurring, keys=list(range(len(reoccurring))),
+                         names=['rid', 'trid'])
 
             
     def plot_history(self, what='balance', startdate=None, enddate=None, 
@@ -739,3 +923,49 @@ def parse_date(date):
             date = pd.Timestamp(date)
                     
     return date
+
+
+def get_period_id(id_or_date, period='month'):
+    """Transforms date formats into period ids relative to today.
+    
+    Period ids are counts of periods relative to today. E.g., for period=month
+    an id of -2 identifies the month 2 months before today's month, i.e., July,
+    if today is in September. The day of the month is irrelevant for this.
+    """
+    if isinstance(id_or_date, int):
+        return id_or_date
+    else:
+        date = parse_date(id_or_date)
+        # parse_date returns a pandas timestamp - convert to date
+        date = date.date()
+        
+        # turn the date into a period id relative to the current period value
+        today = dt.date.today()
+        
+        if period == 'month':
+            return (date.year - today.year) * 12 + date.month - today.month
+        elif period == 'year':
+            return date.year - today.year
+        else:
+            raise ValueError('Period not recognised!')
+
+
+def longest_common_substring(s1, s2):
+    """Returns longest common substring of two input strings.
+    
+    see https://en.wikipedia.org/wiki/Longest_common_substring_problem
+    and https://en.wikibooks.org/wiki/Algorithm_implementation/Strings/Longest_common_substring#Python_3
+    """
+    m = [[0] * (1 + len(s2)) for i in range(1 + len(s1))]
+    longest, x_longest = 0, 0
+    for x in range(1, 1 + len(s1)):
+        for y in range(1, 1 + len(s2)):
+            if s1[x - 1] == s2[y - 1]:
+                m[x][y] = m[x - 1][y - 1] + 1
+                if m[x][y] > longest:
+                    longest = m[x][y]
+                    x_longest = x
+            else:
+                m[x][y] = 0
+    return s1[x_longest - longest: x_longest]
+
