@@ -687,6 +687,17 @@ class ing_diba_giro(account):
             for line in file:
                 skiprows += 1
                 if line.startswith(('"Buchung";', 'Buchung;')):
+                    # find the indices of the interesting columns
+                    colnames = [s.strip() for s in line.split(';')]
+                    order = ['Buchung', 'Valuta', 'Auftraggeber/Empfänger',
+                             'Buchungstext', 'Verwendungszweck', 'Betrag']
+                    colinds = []
+                    for col in order:
+                        for i, name in enumerate(colnames):
+                            if col == name:
+                                colinds.append(i)
+                                break
+                    
                     break
                 
         """
@@ -700,7 +711,7 @@ class ing_diba_giro(account):
         """
         return pd.read_csv(filepath, sep=';', header=None, skiprows=skiprows, 
             names=('booking date', 'value date', 'agent', 'type', 
-            'description', 'amount'), usecols=range(6), skipinitialspace=True, 
+            'description', 'amount'), usecols=colinds, skipinitialspace=True, 
             decimal=',', thousands='.', parse_dates=[0, 1], dayfirst=True,
             converters={'agent': rmspace, 'description': rmspace},
             encoding='latin_1')
