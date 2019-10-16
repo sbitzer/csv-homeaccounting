@@ -381,7 +381,9 @@ class account(metaclass=ABCMeta):
         if description is None:
             d_match = pd.np.ones(len(self.transactions), dtype=bool)
         else:
-            d_match = self.transactions['description'].str.contains(description, case)
+            # comparing with True in the end to not match NaN
+            d_match = self.transactions['description'].str.contains(
+                    description, case) == True
 
         return self.transactions[
             are_equal_or_nan(self.transactions['booking date'], bdate) &
