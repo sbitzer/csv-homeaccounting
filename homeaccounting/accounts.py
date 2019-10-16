@@ -10,7 +10,6 @@ import csv
 import os.path
 from os import scandir
 import pandas as pd
-import datetime as dt
 import calendar
 from collections import deque
 from warnings import warn
@@ -251,12 +250,12 @@ class account(metaclass=ABCMeta):
         """Get transactions for the selected period. See get_year, get_month."""
         period_id = get_period_id(period_id, period)
         
-        date = dt.date.today()
+        date = pd.Timestamp.today()
         
         if period == 'month':
             for m_it in range(abs(period_id)):
                 # get a day in the previous month
-                date = date.replace(day=1) - dt.timedelta(1)
+                date = date.replace(day=1) - pd.Timedelta(days=1)
                 
             first_day = date.replace(day=1)
             last_day = date.replace(day=calendar.monthrange(
@@ -526,7 +525,7 @@ class account(metaclass=ABCMeta):
         else:
             startdate = parse_date(startdate)
         if enddate is None:
-            enddate = pd.datetime.today()
+            enddate = pd.Timestamp.today()
         else:
             enddate = parse_date(enddate)
         
@@ -587,7 +586,7 @@ class account(metaclass=ABCMeta):
                 'null']):
                 sellyear = pd.NaT
         
-        now = dt.datetime.today()
+        now = pd.Timestamp.now()
         
         debt = 0
         
@@ -888,7 +887,7 @@ class credit_subaccount():
             credit += pd.np.min([row.amount, 0])
             
         # add interest from last transaction to today
-        dt = (pd.datetime.today() - lastdate).days
+        dt = (pd.Timestamp.today() - lastdate).days
         factor = (1 + self.aer / 100 / 365) ** dt
         interest += (factor - 1) * balance
         balance *= factor
@@ -953,7 +952,7 @@ def get_period_id(id_or_date, period='month'):
         date = date.date()
         
         # turn the date into a period id relative to the current period value
-        today = dt.date.today()
+        today = pd.Timestamp.today()
         
         if period == 'month':
             return (date.year - today.year) * 12 + date.month - today.month
