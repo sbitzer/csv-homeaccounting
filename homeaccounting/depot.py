@@ -145,7 +145,8 @@ class depot(object):
         cols = plt.get_cmap('Accent')
         cols = cols(np.linspace(0, 1, len(names)))
         
-        ax = plt.axes(aspect=1)
+        fig, ax = plt.subplots()
+        ax.set_aspect(1)
         ax.pie(balances, labels=names, autopct=balfun, colors=cols)
         ax.set_title('balances in ' + self.currency + ' (total: %.2f)' % total)
         
