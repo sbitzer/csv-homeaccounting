@@ -105,6 +105,21 @@ class depot(object):
         self._accounts.append(acc)
         
         
+    def remove_account(self, name):
+        """Remove an account from this depot."""
+        try:
+            self.account_infos.drop(
+                    self.account_infos[
+                            self.account_infos.name == name].index,
+                    inplace=True)
+        except KeyError:
+            raise KeyError('No account with that name exists in depot!')
+        else:
+            self.account_infos.to_csv(
+                    os.path.join(self.path, self.filename + '.csv'))
+                    
+            print('removed account "' + name + '".')
+        
     def show_overview(self):
         """Shows account balances as a pie-plot."""
         
