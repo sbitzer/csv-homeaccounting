@@ -58,7 +58,26 @@ class depot(object):
         """Dataframe containing type and location of accounts."""
         self.load_accounts()
 
-        
+    def _find_account(self, key):
+        if isinstance(key, int):
+            try:
+                ind = self.account_infos.index.get_loc(key)
+            except KeyError:
+                raise KeyError(f"No account with ID '{key}'!")
+        else:
+            ind = self.account_infos.name == key
+            if np.any(ind):
+                ind = np.flatnonzero(ind)[0]
+            else:
+                raise KeyError(f"No account with name '{key}'!")
+
+        return ind
+
+    def __getitem__(self, key):
+        ind = self._find_account(key)
+
+        return self.accounts[ind]
+
     def load_accounts(self):
         """Load the accounts previously added to this depot."""
         
@@ -105,20 +124,23 @@ class depot(object):
         self._accounts.append(acc)
         
         
-    def remove_account(self, name):
-        """Remove an account from this depot."""
-        try:
-            self.account_infos.drop(
-                    self.account_infos[
-                            self.account_infos.name == name].index,
-                    inplace=True)
-        except KeyError:
-            raise KeyError('No account with that name exists in depot!')
-        else:
-            self.account_infos.to_csv(
-                    os.path.join(self.path, self.filename + '.csv'))
+    def remove_account(self, key):
+        """Remove an account from this depot.
+        
+        Parameters
+        ----------
+        key : int, str
+            id, or name of account in depot
+        """
+        ind = self._find_account(key)
+        name = self.account_infos.iloc[ind].name
+        self.account_infos.drop(self.account_infos.index[ind], inplace=True)
+        self.account_infos.to_csv(
+                os.path.join(self.path, self.filename + '.csv'))
                     
-            print('removed account "' + name + '".')
+        del self.accounts[ind]
+
+        print('removed account "' + name + '".')
         
     def show_overview(self):
         """Shows account balances as a pie-plot."""
