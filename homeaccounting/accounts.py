@@ -370,12 +370,14 @@ class account(metaclass=ABCMeta):
         if agent is None:
             a_match = pd.np.ones(len(self.transactions), dtype=bool)
         else:
-            a_match = self.transactions['agent'].str.contains(agent, case)
+            a_match = self.transactions['agent'].str.contains(
+				agent, case).astype(bool)
             
         if t_type is None:
             t_match = pd.np.ones(len(self.transactions), dtype=bool)
         else:
-            t_match = self.transactions['type'].str.contains(t_type, case)
+            t_match = self.transactions['type'].str.contains(
+				t_type, case).astype(bool)
             
         if description is None:
             d_match = pd.np.ones(len(self.transactions), dtype=bool)
