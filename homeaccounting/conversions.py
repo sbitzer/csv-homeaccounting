@@ -5,20 +5,44 @@ Created on Sat Nov 19 17:46:28 2016
 
 @author: bitzer
 """
-
-# NOTE that I had to adapt forex_python's __init__.py so that it also loads 
-# converter and not only bitcoin - something must have gone wrong during install?
-import forex_python as fx
-import ystockquote
-import numpy as np
+import pathlib
 import re
 from warnings import warn
+
+import numpy as np
+from alpha_vantage.foreignexchange import ForeignExchange
+from alpha_vantage.timeseries import TimeSeries
+
+with open(pathlib.Path(__file__).parent / 'alpha_vantage.key', 'r') as file:
+    avkey = file.readline()
 
 symbol_re = re.compile(r'([A-Z\d]+)\.?([A-Z]+)?')
 common_currencies = ['EUR', 'USD', 'GBP', 'CAD', 'CNY', 'CHF', 'DKK', 'INR',
                      'NOK', 'RUB', 'JPY', 'BRL', 'KRW']
 
 currency_map = {'DE': 'EUR', None: 'USD'}
+
+def search_symbol(keywords):
+    ts = TimeSeries(avkey)
+    info, _ = ts.get_symbol_search(keywords)
+
+    return info
+
+def stockprice(symbol):
+    ts = TimeSeries(avkey)
+    info, _ = ts.get_symbol_search(symbol)
+    if info:
+        currency = info[0]['8. currency']
+    else:
+        raise ValueError(f"Symbol '{symbol}' not found in AlphaVantage!")
+
+    out, _ = ts.get_quote_endpoint(symbol)
+    if out:
+        price = float(out['05. price'])
+    else:
+        raise ValueError(f"No data for '{symbol}' on AlphaVantage!")
+
+    return price, currency
 
 def convert(x, from_symbol, to_symbol):
     from_symbol = from_symbol.upper()
@@ -39,54 +63,38 @@ def convert(x, from_symbol, to_symbol):
         warn('converter: cannot currently convert assets to or from ISIN, '
              'returning NaN!')
         return np.nan
-    elif from_type == 'altcoin' or to_type == 'altcoin':
-        warn('converter: cannot currently convert assets to or from altcoins, '
-             'returning NaN!')
-        return np.nan
     elif to_type is None:
         warn('converter: did not recognise to_symbol "%s", returning NaN!' % 
              to_symbol)
         return np.nan
     else:
         try:
-            # from bitcoin to something
-            if from_type == 'bitcoin':
-                bconv = fx.bitcoin.BtcConverter()
-                if to_type != 'currency':
-                    x = bconv.convert_btc_to_cur(x, 'EUR')
-                    y = convert(x, 'EUR', to_symbol)
-                else:
-                    y = bconv.convert_btc_to_cur(x, to_symbol)
+            if from_type in ['crypto', 'currency'] and to_type in ['crypto', 'currency']:
+                fx = ForeignExchange(key=avkey)
+                out, _ = fx.get_currency_exchange_rate(from_symbol, to_symbol)
                 
-            # from something to bitcoin
-            elif to_type == 'bitcoin':
-                if from_type != 'currency':
-                    x = convert(x, from_symbol, 'EUR')
-                    from_symbol = 'EUR'
-                    
-                bconv = fx.bitcoin.BtcConverter()
-                y = bconv.convert_to_btc(x, from_symbol)
-            
-            # from stock/fund to something
-            elif from_type == 'yahoo':
-                from_groups = symbol_re.match(from_symbol).groups()
-                stock_info = ystockquote.get_all(from_symbol)
-                price = convert(float(stock_info['price']), 
-                                currency_map[from_groups[1]], to_symbol)
+                y = x * float(out['5. Exchange Rate'])
+                
+            elif from_type in ['crypto', 'currency'] and to_type == 'stock':
+                price, currency = stockprice(to_symbol)
+
+                if from_symbol != currency:
+                    x = convert(x, from_symbol, currency)
+
+                y = x / price
+                
+            elif from_type == 'stock' and to_type in ['crypto', 'currency']:
+                price, currency = stockprice(from_symbol)
+                if currency != to_symbol:
+                    price = convert(price, currency, to_symbol)
+                
                 y = x * price
                 
-            # from something to stock/fund
-            elif to_type == 'yahoo':
-                to_groups = symbol_re.match(to_symbol).groups()
-                stock_info = ystockquote.get_all(to_symbol)
-                price = convert(float(stock_info['price']), 
-                                currency_map[to_groups[1]], from_symbol)
-                y = x / price
-            
-            # from currency to currency
-            elif from_type == 'currency' and to_type == 'currency':
-                cconv = fx.converter.CurrencyRates()
-                y = cconv.convert(from_symbol, to_symbol, x)
+            elif from_type == 'stock' and to_type == 'stock':
+                x = convert(x, from_symbol, 'EUR')
+                y = convert(1, to_symbol, 'EUR')
+
+                y = x / y
                 
         except Exception as err:
             warn('converter: unexpected error ({}) during conversion, '
@@ -109,14 +117,12 @@ def identify_symbol(symbol):
     groups = match.groups()
         
     if groups[1] is not None:
-        return 'yahoo'
+        return 'stock'
     elif len(groups[0]) == 12:
         return 'ISIN'
     elif groups[0] in common_currencies:
         return 'currency'
-    elif groups[0] in ['BTC', 'XBT']:
-        return 'bitcoin'
-    elif groups[0] in ['ETH', 'ZEC', 'BCH']:
-        return 'altcoin'
+    elif groups[0] in ['BTC', 'XBT', 'ETH', 'ZEC', 'BCH']:
+        return 'crypto'
     else:
-        return 'yahoo'
+        return 'stock'

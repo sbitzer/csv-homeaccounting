@@ -26,7 +26,6 @@ setup(
     install_requires=[
         'pandas',
         'matplotlib',
-        'ystockquote',
-        'forex-python'
+        'alpha_vantage'
     ]
 )

@@ -10,7 +10,7 @@ import os.path
 import pandas as pd
 import re
 from . import accounts
-from . import convert
+from . import convert, search_symbol
 import math
 import numpy as np
 import matplotlib.pyplot as plt
@@ -102,6 +102,9 @@ class depot(object):
                 'check_for_duplicates=row["check_for_duplicates"], '
                 'currency=row["currency"])'))
                     
+    @staticmethod
+    def search_symbol(keywords):
+        return search_symbol(keywords)
                     
     def add_account(self, acc):
         """Add an account to this depot."""
