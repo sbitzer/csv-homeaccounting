@@ -1,3 +1,4 @@
+.vscode
 .spyderproject
 .spyproject
 __pycache__
@@ -5,3 +6,4 @@ __pycache__
 *.csv
 *.ipynb_checkpoints
 *.pyc
+alpha_vantage.key
