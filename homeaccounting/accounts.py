@@ -8,7 +8,9 @@ Created on Mon Oct  3 16:38:18 2016
 from abc import ABCMeta, abstractmethod
 import csv
 import os.path
+from datetime import datetime
 from os import scandir
+import numpy as  np
 import pandas as pd
 import calendar
 from collections import deque
@@ -103,7 +105,7 @@ class account(metaclass=ABCMeta):
             
         self.load_transaction_files()
  
-        self.balance = pd.np.nan
+        self.balance = np.nan
         """Account balance is the sum of all transaction amounts."""
         
         self.load_transactions()
@@ -368,19 +370,19 @@ class account(metaclass=ABCMeta):
             vdate = parse_date(vdate)
             
         if agent is None:
-            a_match = pd.np.ones(len(self.transactions), dtype=bool)
+            a_match = np.ones(len(self.transactions), dtype=bool)
         else:
             a_match = self.transactions['agent'].str.contains(
 				agent, case).astype(bool)
             
         if t_type is None:
-            t_match = pd.np.ones(len(self.transactions), dtype=bool)
+            t_match = np.ones(len(self.transactions), dtype=bool)
         else:
             t_match = self.transactions['type'].str.contains(
 				t_type, case).astype(bool)
             
         if description is None:
-            d_match = pd.np.ones(len(self.transactions), dtype=bool)
+            d_match = np.ones(len(self.transactions), dtype=bool)
         else:
             # comparing with True in the end to not match NaN
             d_match = self.transactions['description'].str.contains(
@@ -480,8 +482,8 @@ class account(metaclass=ABCMeta):
                     break
                 
             if matching:
-                matching = pd.np.concatenate(
-                        [pd.np.array([trans.name])] + matching)
+                matching = np.concatenate(
+                        [np.array([trans.name])] + matching)
                 
                 # drop matched transactions to prevent rematching with other
                 df.drop(matching[1:], level='trid', inplace=True)
@@ -794,7 +796,7 @@ class credit_subaccount():
         computes daily interests rates for a given annual equivalent rate.
     """
     
-    def __init__(self, acc, desc, aer, tr_inds=pd.np.array([]), agent=None,
+    def __init__(self, acc, desc, aer, tr_inds=np.array([]), agent=None,
                  verbose=True):
         """Define a credit account based on a standard current account.
         
@@ -844,7 +846,7 @@ class credit_subaccount():
         """Returns transactions associated with the credit, sorted by value date."""
         
         tr = self.acc.find(description=self.desc, agent=self.agent)
-        inds = pd.np.unique(pd.np.r_[self.tr_inds, tr.index])
+        inds = np.unique(np.r_[self.tr_inds, tr.index])
         return self.acc.transactions.loc[inds].sort_values('value date')
         
     def get_state(self):
@@ -886,7 +888,7 @@ class credit_subaccount():
             balance += row.amount
             
             # save credit
-            credit += pd.np.min([row.amount, 0])
+            credit += np.min([row.amount, 0])
             
         # add interest from last transaction to today
         dt = (pd.Timestamp.today() - lastdate).days
@@ -912,7 +914,7 @@ def rmspace(s):
     if len(s) > 0:
         return s
     else:
-        return pd.np.nan
+        return np.nan
         
         
 def are_equal_or_nan(array, val):
@@ -923,7 +925,7 @@ def are_equal_or_nan(array, val):
     """
     
     if val is None:
-        return pd.np.ones(len(array), dtype=bool)
+        return np.ones(len(array), dtype=bool)
     else:
         return (array == val) | ((array != array) & (val != val))
     
@@ -932,7 +934,7 @@ def parse_date(date):
     """Parse the date into pandas Timestamp, handle German dd.mm.yyyy manually"""
     if type(date) is not pd.Timestamp:
         if isinstance(date, str) and date[2] == '.':
-            date = pd.Timestamp(pd.datetime.strptime(date, '%d.%m.%Y'))
+            date = pd.Timestamp(datetime.strptime(date, '%d.%m.%Y'))
         else:
             date = pd.Timestamp(date)
                     
