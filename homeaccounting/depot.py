@@ -6,6 +6,7 @@ Created on Sat Oct 22 18:15:41 2016
 @author: bitzer
 """
 
+from homeaccounting.conversions import ConversionSet, identify_symbol
 import os.path
 import pandas as pd
 import re
@@ -78,7 +79,7 @@ class depot(object):
 
         return self.accounts[ind]
 
-    def load_accounts(self):
+    def load_accounts(self, conversions=True):
         """Load the accounts previously added to this depot."""
         
         fullpath = os.path.join(self.path, self.filename + '.csv')
@@ -101,10 +102,21 @@ class depot(object):
                 'filename=row["filename"], path=row["path"], '
                 'check_for_duplicates=row["check_for_duplicates"], '
                 'currency=row["currency"])'))
+
+        if conversions:
+            self.fetch_conversions()
                     
     @staticmethod
     def search_symbol(keywords):
         return search_symbol(keywords)
+
+    def fetch_conversions(self):
+        print(f'fetching conversions ... ', flush=True)
+        if hasattr(self, 'converters'):
+            self.converters.update()
+        else:
+            self.converters = ConversionSet(self)
+        print('done.')
                     
     def add_account(self, acc):
         """Add an account to this depot."""
@@ -125,7 +137,9 @@ class depot(object):
         
         # add to account list
         self._accounts.append(acc)
-        
+
+        # add converter
+        self.converters.add(acc.currency)
         
     def remove_account(self, key):
         """Remove an account from this depot.
@@ -136,7 +150,7 @@ class depot(object):
             id, or name of account in depot
         """
         ind = self._find_account(key)
-        name = self.account_infos.iloc[ind].name
+        name = self.account_infos.iloc[ind]['name']
         self.account_infos.drop(self.account_infos.index[ind], inplace=True)
         self.account_infos.to_csv(
                 os.path.join(self.path, self.filename + '.csv'))
@@ -153,7 +167,7 @@ class depot(object):
         inconvertible = pd.DataFrame(columns=['name', 'balance', 'currency'])
 
         for acc in self.accounts:
-            balance = convert(acc.balance, acc.currency, self.currency)
+            balance = self.converters(acc.currency, acc.balance)
             if np.isnan(balance):
                 inconvertible = pd.concat([inconvertible, pd.DataFrame(
                     {'name': [acc.name], 'balance': [acc.balance], 
@@ -162,20 +176,27 @@ class depot(object):
                 names.append(acc.name)
                 balances.append(balance)
         
+        balances = pd.Series(balances, index=names)
+
+        _fig, ax = plt.subplots(constrained_layout=True)
+        balances.sort_values().plot.barh(ax=ax)
+
         numzeros = math.ceil(math.log10(max(balances)))
         total = sum(balances)
         fmt = '%'+str(numzeros+3)+'.2f'
         balfun = lambda pct: fmt % (pct / 100 * total)
         
-        cols = plt.get_cmap('Accent')
-        cols = cols(np.linspace(0, 1, len(names)))
-        
-        fig, ax = plt.subplots()
+        ainfos = self.account_infos.set_index('name')
+        ainfos['kind'] = ainfos.currency.map(identify_symbol)
+        ainfos['balance'] = balances
+        bykind = ainfos.groupby('kind').sum()
+
+        _fig, ax = plt.subplots(constrained_layout=True)
+        _ = ax.pie(bykind.balance, labels=bykind.index, autopct=balfun)
         ax.set_aspect(1)
-        ax.pie(balances, labels=names, autopct=balfun, colors=cols)
         ax.set_title('balances in ' + self.currency + ' (total: %.2f)' % total)
         
-        return inconvertible
+        return ainfos, inconvertible
     
     
     def get_ages(self, sellyear=None, exclude=None):
