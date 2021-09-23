@@ -24,7 +24,7 @@ class depot(object):
     account_info_cols = ('type', 'name', 'filename', 'path', 
                          'check_for_duplicates', 'currency')
         
-    info_re = re.compile(r'^[\w\\/\.-]+$')
+    info_re = re.compile(r'^[\w\\/\.\- \(\)]+$')
         
     def __init__(self, name='default depot', filename=None, path='.', 
                  currency='EUR'):
