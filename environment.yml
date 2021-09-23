@@ -1,0 +1,8 @@
+name: accounts
+dependencies:
+  - pandas
+  - jupyter
+  - matplotlib
+  - pip
+  - pip:
+    - alpha_vantage
