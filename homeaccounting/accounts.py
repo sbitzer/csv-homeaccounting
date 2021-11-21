@@ -369,29 +369,13 @@ class account(metaclass=ABCMeta):
         if vdate is not None:
             vdate = parse_date(vdate)
 
-        if agent is None:
-            a_match = np.ones(len(self.transactions), dtype=bool)
-        else:
-            a_match = self.transactions['agent'].str.contains(
-				agent, case).astype(bool)
-
-        if t_type is None:
-            t_match = np.ones(len(self.transactions), dtype=bool)
-        else:
-            t_match = self.transactions['type'].str.contains(
-				t_type, case).astype(bool)
-
-        if description is None:
-            d_match = np.ones(len(self.transactions), dtype=bool)
-        else:
-            # comparing with True in the end to not match NaN
-            d_match = self.transactions['description'].str.contains(
-                    description, case) == True
-
         return self.transactions[
             are_equal_or_nan(self.transactions['booking date'], bdate) &
             are_equal_or_nan(self.transactions['value date'], vdate) &
-            a_match & t_match & d_match &
+            are_equal_or_nan(self.transactions['agent'], agent, case) &
+            are_equal_or_nan(self.transactions['type'], t_type, case) &
+            are_equal_or_nan(
+                self.transactions['description'], description, case) &
             are_equal_or_nan(self.transactions['amount'], amount)]
 
 
@@ -917,7 +901,7 @@ def rmspace(s):
         return np.nan
 
 
-def are_equal_or_nan(array, val):
+def are_equal_or_nan(array, val, case=False):
     """Checks whether val is in array, including when val is nan.
 
     If val is None, it's treated as a wildcard which is matched by all elements
@@ -926,8 +910,13 @@ def are_equal_or_nan(array, val):
 
     if val is None:
         return np.ones(len(array), dtype=bool)
+    elif pd.isna(val):
+        return pd.isan(array)
+    elif array.dtype == np.dtype('O'):
+        # comparing with True in the end to not match NaN
+        return array.str.contains(val, case) == True
     else:
-        return (array == val) | ((array != array) & (val != val))
+        return array == val
 
 
 def parse_date(date):
