@@ -381,12 +381,12 @@ class account(metaclass=ABCMeta):
             are_equal_or_nan(self.transactions['amount'], amount)]
 
 
-    def find_reoccurring(self, start=-4, end=-1, period='month',
+    def find_recurring(self, start=-4, end=-1, period='month',
                          exactly_one=True, **matcher_kwargs):
         """Finds transactions that reoccur every month/year.
 
-        Selects a range of transactions from which reoccurring transactions
-        should be identified. Reoccurring transactions will be defined by the
+        Selects a range of transactions from which recurring transactions
+        should be identified. Recurring transactions will be defined by the
         keyword arguments passed to the flexible_transaction_matcher (see
         below).
 
@@ -403,7 +403,7 @@ class account(metaclass=ABCMeta):
             date format string (yyyy-mm) is given the month of that date is the
             last considered
         period : str, default 'month'
-            time periods to consider, 'month' for transactions reoccurring
+            time periods to consider, 'month' for transactions recurring
             monthly and 'year' for yearly transactions
         exactly_one : bool, default True
             whether to only return matched transactions when each considered
@@ -417,7 +417,7 @@ class account(metaclass=ABCMeta):
         agent = 'substr'
         from_start = True
 
-        This setting identifies reoccurring transactions relatively loosely,
+        This setting identifies recurring transactions relatively loosely,
         only requiring the transaction type to match and the agent string to
         begin with the same substring (of length 6 by default)
 
@@ -447,7 +447,7 @@ class account(metaclass=ABCMeta):
 
         # go through each transaction and check whether there are matching
         # transactions in all of the other periods
-        reoccurring = []
+        recurring = []
         for _, trans in df.loc[pfew].iterrows():
             matching = []
 
@@ -474,10 +474,10 @@ class account(metaclass=ABCMeta):
                 # drop matched transactions to prevent rematching with other
                 df.drop(matching[1:], level='trid', inplace=True)
 
-                reoccurring.append(self.transactions.loc[matching]
+                recurring.append(self.transactions.loc[matching]
                                    .sort_values('value date'))
 
-        return pd.concat(reoccurring, keys=list(range(len(reoccurring))),
+        return pd.concat(recurring, keys=list(range(len(recurring))),
                          names=['rid', 'trid'])
 
 
