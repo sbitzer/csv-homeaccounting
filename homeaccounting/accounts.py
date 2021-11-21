@@ -60,7 +60,9 @@ class account(metaclass=ABCMeta):
 
             elif matchval == 'substr':
                 str1 = tr1[fieldname]
+                str1 = '*#mi$$ing#*' if pd.isna(str1) else str(str1)
                 str2 = tr2[fieldname]
+                str2 = '*#mi$$ing#*' if pd.isna(str2) else str(str2)
                 if not case:
                     str1 = str1.lower()
                     str2 = str2.lower()
