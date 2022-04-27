@@ -216,6 +216,9 @@ class account(metaclass=ABCMeta):
         transaction list of the account and returns only those new_transactions
         which are not in the transaction list yet.
         """
+        if self.transactions.empty:
+            return new_transactions
+
         new_inds = []
         for row in new_transactions.itertuples():
             if not (are_equal_or_nan(self.transactions['booking date'], row._1) &
