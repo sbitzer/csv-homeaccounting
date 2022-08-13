@@ -911,7 +911,7 @@ def are_equal_or_nan(array, val, case=False):
         return pd.isna(array)
     elif array.dtype == np.dtype('O'):
         # comparing with True in the end to not match NaN
-        return array.str.contains(val, case) == True
+        return array.str.contains(val, case, regex=False) == True
     else:
         return array == val
 
