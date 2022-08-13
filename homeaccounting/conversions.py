@@ -213,14 +213,12 @@ class CurrencyConverter(collections.namedtuple(
         rate = np.nan
         if kind in ('curr2curr', 'crypto2curr',
                     'crypto2crypto'):
-            fx = ForeignExchange(key=avkey)
-            out, _ = fx.get_currency_exchange_rate(fromsym, tosym)
-            rate = float(out['5. Exchange Rate'])
+            # AlphaVantage ExchangeRates became premium - need new
+            pass
 
         elif kind == 'curr2crypto':
-            fx = ForeignExchange(key=avkey)
-            out, _ = fx.get_currency_exchange_rate(tosym, fromsym)
-            rate = 1 / float(out['5. Exchange Rate'])
+            # AlphaVantage ExchangeRates became premium - need new
+            pass
 
         elif kind in ('stock2curr', 'curr2stock'):
             if kind == 'curr2stock':
