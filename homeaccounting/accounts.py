@@ -255,7 +255,7 @@ class account(metaclass=ABCMeta):
         """Get transactions for the selected period. See get_year, get_month."""
         period_id = get_period_id(period_id, period)
 
-        date = pd.Timestamp.today()
+        date = pd.Timestamp.today().normalize()
 
         if period == 'month':
             for m_it in range(abs(period_id)):
@@ -263,8 +263,7 @@ class account(metaclass=ABCMeta):
                 date = date.replace(day=1) - pd.Timedelta(days=1)
 
             first_day = date.replace(day=1)
-            last_day = date.replace(day=calendar.monthrange(
-                    date.year, date.month)[1])
+            last_day = first_day + pd.DateOffset(months=1)
         elif period == 'year':
             first_day = date.replace(
                     year=date.year - abs(period_id), month=1, day=1)
