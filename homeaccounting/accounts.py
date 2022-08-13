@@ -77,6 +77,10 @@ class account(metaclass=ABCMeta):
 
         return True
 
+    @property
+    def balance(self):
+        """Account balance is the sum of all transaction amounts."""
+        return self.transactions['amount'].sum()
 
     def __init__(self, name='base_account', filename=None, path='.',
                  check_for_duplicates=True, currency='EUR'):
@@ -106,9 +110,6 @@ class account(metaclass=ABCMeta):
             self.filename = self.name.replace(' ', '_').lower()
 
         self.load_transaction_files()
-
-        self.balance = np.nan
-        """Account balance is the sum of all transaction amounts."""
 
         self.load_transactions()
 
@@ -166,9 +167,6 @@ class account(metaclass=ABCMeta):
                     N_new += n_new
                     self.transactions = self.transactions.append(new_transactions,
                         ignore_index=True)
-
-        # update balance
-        self.balance = self.transactions['amount'].sum()
 
         if there_were_new_transaction_files:
             # save new file name list
@@ -737,10 +735,6 @@ class manual_current(account):
             self.transactions = pd.DataFrame(columns=('booking date',
                 'value date', 'agent', 'type', 'description', 'amount'))
 
-        # update balance
-        self.balance = self.transactions['amount'].sum()
-
-
     def get_transactions_from_csv(self, filepath):
         """As this is a manual account no transactions will be loaded."""
         return pd.DataFrame(columns=('booking date', 'value date', 'agent',
@@ -769,8 +763,6 @@ class manual_current(account):
         if len(transaction) > 0:
             self.transactions = self.transactions.append(transaction,
                                                          ignore_index=True)
-            # update balance
-            self.balance = self.transactions['amount'].sum()
 
             self.transactions.to_csv(os.path.join(self.path, self.filename +
                                                   '.csv'))
