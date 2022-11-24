@@ -36,7 +36,8 @@ def from_isin(isin):
                 for grp in restype['suggestion_groups']:
                     for hit in grp['suggestions']:
                         if hit['isin'] == isin:
-                            return hit['price'], curr
+                            if 'price' in hit:
+                                return hit['price'], curr
 
     raise notfounderr
 
