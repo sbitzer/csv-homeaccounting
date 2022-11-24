@@ -167,6 +167,8 @@ class depot(object):
         inconvertible = pd.DataFrame(columns=['name', 'balance', 'currency'])
 
         for acc in self.accounts:
+            if np.isclose(acc.balance, 0):
+                continue
             balance = self.converters(acc.currency, acc.balance)
             if np.isnan(balance):
                 inconvertible = pd.concat([inconvertible, pd.DataFrame(
@@ -186,7 +188,7 @@ class depot(object):
         fmt = '%'+str(numzeros+3)+'.2f'
         balfun = lambda pct: fmt % (pct / 100 * total)
 
-        ainfos = self.account_infos.set_index('name')
+        ainfos = self.account_infos.set_index('name').loc[names]
         ainfos['kind'] = ainfos.currency.map(identify_symbol)
         ainfos['balance'] = balances
         bykind = ainfos.groupby('kind').sum()
