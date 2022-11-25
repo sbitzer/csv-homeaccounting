@@ -18,6 +18,7 @@ from alpha_vantage.foreignexchange import ForeignExchange as avForeignExchange
 from alpha_vantage.timeseries import TimeSeries as avTimeSeries
 
 from . import stockprices
+from . import cryptoprices
 
 
 def wait(call):
@@ -212,13 +213,8 @@ class CurrencyConverter(collections.namedtuple(
 
         rate = np.nan
         if kind in ('curr2curr', 'crypto2curr',
-                    'crypto2crypto'):
-            # AlphaVantage ExchangeRates became premium - need new
-            pass
-
-        elif kind == 'curr2crypto':
-            # AlphaVantage ExchangeRates became premium - need new
-            pass
+                    'crypto2crypto', 'curr2crypto'):
+            rate = cryptoprices.get_exchange_rate(fromsym, tosym)
 
         elif kind in ('stock2curr', 'curr2stock'):
             if kind == 'curr2stock':

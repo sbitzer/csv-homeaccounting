@@ -3,6 +3,7 @@ dependencies:
   - pandas
   - jupyter
   - matplotlib
+  - requests
   - pip
   - pip:
     - alpha_vantage
